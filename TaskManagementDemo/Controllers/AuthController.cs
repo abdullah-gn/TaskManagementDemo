@@ -23,11 +23,10 @@ namespace TaskManagementDemo.Controllers
         {
             var properties = new AuthenticationProperties
             {
-                RedirectUri = "/api/Auth/google-callback",
                 Items =
             {
-                {"LoginProvider", "Google"},
-                {"scheme", GoogleDefaults.AuthenticationScheme}
+                { ".redirect", "/api/Auth/google-callback" },
+                { "LoginProvider", "Google" }
             },
                 AllowRefresh = true,
                 IsPersistent = true
@@ -40,26 +39,35 @@ namespace TaskManagementDemo.Controllers
         {
             try
             {
-                var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                if (!authenticateResult.Succeeded)
-                    return Unauthorized(new { error = "Authentication failed" });
+                if (!result.Succeeded)
+                {
+                    return Unauthorized(new { message = "Authentication failed" });
+                }
 
-                var userId = authenticateResult.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var email = authenticateResult.Principal.FindFirst(ClaimTypes.Email)?.Value;
+                var claims = result.Principal.Identities.FirstOrDefault()?.Claims;
+                var userId = claims?.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                var email = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
 
                 if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email))
-                    return Unauthorized(new { error = "Required claims missing" });
+                {
+                    return BadRequest(new { message = "User information not found" });
+                }
 
                 var token = _authService.GenerateJwtToken(userId, email);
 
-                // Return in a format that works well with the redirect
-                return Ok(new { token });
+                // Return JSON response that can be handled by the client
+                return Ok(new
+                {
+                    token = token,
+                    email = email,
+                    userId = userId
+                });
             }
             catch (Exception ex)
             {
-                // Log the error details
-                return StatusCode(500, new { error = "Authentication failed", details = ex.Message });
+                return StatusCode(500, new { message = "An error occurred during authentication", error = ex.Message });
             }
         }
     }

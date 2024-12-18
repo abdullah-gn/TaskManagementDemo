@@ -1,6 +1,7 @@
 
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using TaskManagementDemo.Data;
@@ -13,7 +14,7 @@ namespace TaskManagementDemo
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            builder.Services.AddDistributedMemoryCache();
             // Add services to the container.
             builder.Services.AddSession(options =>
             {
@@ -28,24 +29,20 @@ namespace TaskManagementDemo
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Task Management API", Version = "v1" });
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Description = "JWT Authorization header using the Bearer scheme",
-                    Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.ApiKey,
-                    Scheme = "Bearer"
-                });
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
+                    Type = SecuritySchemeType.OAuth2,
+                    Flows = new OpenApiOAuthFlows
                     {
-                        new OpenApiSecurityScheme
+                        AuthorizationCode = new OpenApiOAuthFlow
                         {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
+                            AuthorizationUrl = new Uri("https://accounts.google.com/o/oauth2/v2/auth"),
+                            TokenUrl = new Uri("https://oauth2.googleapis.com/token"),
+                            Scopes = new Dictionary<string, string>
+                {
+                    { "openid", "OpenID" },
+                    { "profile", "Profile" },
+                    { "email", "Email" }
+                }
+                        }
                     }
                 });
             });
@@ -57,19 +54,39 @@ namespace TaskManagementDemo
             })
             .AddCookie(options =>
             {
-                options.LoginPath = "/api/auth/google-login";
-                options.Cookie.Name = "TaskManagementApp";
-                // Add these cookie settings
-                options.Cookie.HttpOnly = true;
+                options.Cookie.Name = ".AspNetCore.Auth";
+                options.ExpireTimeSpan = TimeSpan.FromHours(24);
+                options.SlidingExpiration = true;
                 options.Cookie.SameSite = SameSiteMode.Lax;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             })
             .AddGoogle(options =>
             {
                 options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
                 options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-                options.SaveTokens = true;
-                options.CallbackPath = "/api/Auth/google-callback";
+                // options.CallbackPath = "/api/Auth/google-callback";
+                options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Events = new OAuthEvents
+                {
+                    OnRedirectToAuthorizationEndpoint = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api/Auth/google-login"))
+                        {
+                            context.Response.Redirect(context.RedirectUri);
+                            return Task.CompletedTask;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", builder =>
+                {
+                    builder.AllowAnyOrigin()
+                           .AllowAnyMethod()
+                           .AllowAnyHeader();
+                });
             });
 
             // Add DbContext
@@ -91,8 +108,12 @@ namespace TaskManagementDemo
             }
 
             app.UseHttpsRedirection();
+            app.UseCors("AllowAll");
+            app.UseSession();
+            app.UseCookiePolicy();
             app.UseAuthentication();
             app.UseAuthorization();
+
             app.MapControllers();
 
             app.Run();
