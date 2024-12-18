@@ -41,10 +41,9 @@ namespace TaskManagementDemo
                 });
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement()
-             {
                 {
-            new OpenApiSecurityScheme
-            {
+                { new OpenApiSecurityScheme
+                 {
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
@@ -53,9 +52,9 @@ namespace TaskManagementDemo
                 Scheme = "oauth2",
                 Name = "Bearer",
                 In = ParameterLocation.Header,
-               },
-            new List<string>()
-               }
+                 },
+                new List<string>()
+                  }
                  });
             });
 
@@ -76,7 +75,6 @@ namespace TaskManagementDemo
             {
                 options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
                 options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-                // options.CallbackPath = "/api/Auth/google-callback";
                 options.CorrelationCookie.SameSite = SameSiteMode.Lax;
                 options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Events = new OAuthEvents
@@ -127,11 +125,32 @@ namespace TaskManagementDemo
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+
+                // Add this endpoint for login page
+                //not a good way but it's only here for testing
+                app.MapGet("/login", async context =>
+                {
+                    var html = @"
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Login</title>
+                        </head>
+                        <body>
+                            <h2>Login Options</h2>
+                            <a href='/api/Auth/google-login' style='display: inline-block; padding: 10px 20px; background-color: #4285f4; color: white; text-decoration: none; border-radius: 5px;'>
+                                Login with Google
+                            </a>
+                        </body>
+                        </html>";
+
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(html);
+                });
             }
 
             app.UseHttpsRedirection();

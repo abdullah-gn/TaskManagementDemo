@@ -34,10 +34,10 @@ namespace TaskManagementDemo.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TaskEntity>))]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<IEnumerable<TaskEntity>>> GetTasks()
+        public async Task<ActionResult<IEnumerable<TaskEntity>>> GetTasks([FromQuery] TaskQueryParameters parameters)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var tasks = await _taskService.GetTasksAsync(userId);
+            var tasks = await _taskService.GetTasksAsync(userId, parameters);
             return Ok(tasks);
         }
 

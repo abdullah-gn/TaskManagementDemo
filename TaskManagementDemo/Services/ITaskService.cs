@@ -9,5 +9,7 @@ namespace TaskManagementDemo.Services
         Task<Models.TaskEntity> GetTaskByIdAsync(int id, string userId);
         Task<Models.TaskEntity> UpdateTaskAsync(int id, TaskDto taskDto, string userId);
         Task DeleteTaskAsync(int id, string userId);
+        Task<IEnumerable<TaskEntity>> GetTasksAsync(string userId, TaskQueryParameters parameters);
+
     }
 }

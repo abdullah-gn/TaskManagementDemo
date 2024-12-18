@@ -61,5 +61,51 @@ namespace TaskManagementDemo.Services
             _context.Tasks.Remove(task);
             await _context.SaveChangesAsync();
         }
+        public async Task<IEnumerable<TaskEntity>> GetTasksAsync(string userId, TaskQueryParameters parameters)
+        {
+            var query = _context.Tasks.Where(t => t.UserId == userId);
+
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(parameters.Status))
+            {
+                query = query.Where(t => t.Status.ToLower() == parameters.Status.ToLower());
+            }
+
+            if (parameters.DueDateFrom.HasValue)
+            {
+                query = query.Where(t => t.DueDate >= parameters.DueDateFrom.Value);
+            }
+
+            if (parameters.DueDateTo.HasValue)
+            {
+                query = query.Where(t => t.DueDate <= parameters.DueDateTo.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+            {
+                query = query.Where(t =>
+                    t.Title.Contains(parameters.SearchTerm) ||
+                    t.Description.Contains(parameters.SearchTerm));
+            }
+
+            // Apply sorting
+            query = parameters.SortBy?.ToLower() switch
+            {
+                "title" => parameters.SortDescending
+                    ? query.OrderByDescending(t => t.Title)
+                    : query.OrderBy(t => t.Title),
+                "status" => parameters.SortDescending
+                    ? query.OrderByDescending(t => t.Status)
+                    : query.OrderBy(t => t.Status),
+                "duedate" => parameters.SortDescending
+                    ? query.OrderByDescending(t => t.DueDate)
+                    : query.OrderBy(t => t.DueDate),
+                _ => parameters.SortDescending
+                    ? query.OrderByDescending(t => t.DueDate)
+                    : query.OrderBy(t => t.DueDate)
+            };
+
+            return await query.ToListAsync();
+        }
     }
 }

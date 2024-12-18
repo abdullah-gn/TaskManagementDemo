@@ -57,13 +57,36 @@ namespace TaskManagementDemo.Controllers
 
                 var token = _authService.GenerateJwtToken(userId, email);
 
-                // Return JSON response that can be handled by the client
-                return Ok(new
-                {
-                    token = token,
-                    email = email,
-                    userId = userId
-                });
+                // Return an HTML page that shows the token
+                var html = $@"
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Authentication Success</title>
+                            <script>
+                                function copyToken() {{
+                                    navigator.clipboard.writeText('{token}');
+                                    alert('Token copied to clipboard!');
+                                }}
+                            </script>
+                        </head>
+                        <body>
+                            <h2>Authentication Successful!</h2>
+                            <p>Your token:</p>
+                            <textarea rows='10' cols='50' readonly>{token}</textarea>
+                            <br/>
+                            <button onclick='copyToken()'>Copy Token</button>
+                            <p>You can now use this token in Swagger UI:</p>
+                            <ol>
+                                <li>Go back to <a href='/swagger'>Swagger UI</a></li>
+                                <li>Click the 'Authorize' button</li>
+                                <li>Enter 'Bearer {token}' in the value field</li>
+                                <li>Click 'Authorize'</li>
+                            </ol>
+                        </body>
+                        </html>";
+
+                return Content(html, "text/html");
             }
             catch (Exception ex)
             {
