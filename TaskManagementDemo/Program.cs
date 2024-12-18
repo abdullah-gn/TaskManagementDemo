@@ -1,8 +1,10 @@
 
+using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using TaskManagementDemo.Data;
 using TaskManagementDemo.Services;
@@ -27,25 +29,36 @@ namespace TaskManagementDemo
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Task Management API", Version = "v1" });
+
+                // Add JWT Bearer authentication
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Type = SecuritySchemeType.OAuth2,
-                    Flows = new OpenApiOAuthFlows
-                    {
-                        AuthorizationCode = new OpenApiOAuthFlow
-                        {
-                            AuthorizationUrl = new Uri("https://accounts.google.com/o/oauth2/v2/auth"),
-                            TokenUrl = new Uri("https://oauth2.googleapis.com/token"),
-                            Scopes = new Dictionary<string, string>
-                {
-                    { "openid", "OpenID" },
-                    { "profile", "Profile" },
-                    { "email", "Email" }
-                }
-                        }
-                    }
+                    Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
                 });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+             {
+                {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header,
+               },
+            new List<string>()
+               }
+                 });
             });
+
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -78,7 +91,21 @@ namespace TaskManagementDemo
                         return Task.CompletedTask;
                     }
                 };
-            });
+            })
+                .AddJwtBearer(options =>
+                 {
+                     options.TokenValidationParameters = new TokenValidationParameters
+                     {
+                         ValidateIssuer = true,
+                         ValidateAudience = true,
+                         ValidateLifetime = true,
+                         ValidateIssuerSigningKey = true,
+                         ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                         ValidAudience = builder.Configuration["Jwt:Audience"],
+                         IssuerSigningKey = new SymmetricSecurityKey(
+                             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+                     };
+                 });
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll", builder =>
