@@ -15,8 +15,8 @@ A .NET Core Web API for task management featuring Google OAuth authentication, J
 4. Click "Create Credentials" → "OAuth Client ID"
 5. Choose "Web Application"
 6. Add authorized redirect URIs:
-   - `https://localhost:7241/api/Auth/google-callback`
-   - `https://localhost:7241/signin-google`
+   - `https://localhost:7157/api/Auth/google-callback`
+   - `https://localhost:7157/signin-google`
 7. Save your Client ID and Client Secret
 
 ### 3. Application Configuration
@@ -26,8 +26,8 @@ A .NET Core Web API for task management featuring Google OAuth authentication, J
 {
   "Jwt": {
     "Key": "your-secret-key-min-16-chars",
-    "Issuer": "https://localhost:7241",
-    "Audience": "https://localhost:7241"
+    "Issuer": "https://localhost:7157",
+    "Audience": "https://localhost:7157"
   },
   "Authentication": {
     "Google": {
@@ -45,7 +45,7 @@ A .NET Core Web API for task management featuring Google OAuth authentication, J
 dotnet restore
 dotnet run
 ```
-3. Access Swagger UI at `https://localhost:7241/swagger`
+3. Access Swagger UI at `https://localhost:7157/swagger`
 
 ## API Testing Guide
 
